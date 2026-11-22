@@ -17,11 +17,11 @@ This section is for PagerDuty's app reviewers and for anyone checking a new Inte
    ```
    Until the package is on PyPI, install it from this repository instead: `pip install git+https://github.com/vijilAI/vijil-pagerduty`.
 
-   The command sends one Dome block event twice and one Diamond finding event, built exactly as Vijil Console builds real ones. The service shows two incidents:
+   The command sends one Dome block event twice and one Diamond red team event, built exactly as Vijil Console builds real ones. The service shows two incidents:
    * A Dome block at severity `error` (high urgency), with one alert, because both Dome events share a deduplication key.
-   * A Diamond `pii_leak` finding at severity `warning` (low urgency).
+   * A Diamond red team result at severity `warning` (low urgency), counting 2 vulnerabilities and 1 leaked artifact.
 
-   Every sample event names the agent's trust domain as `test.vijil.ai`. They look like real events on purpose. Console's own `vijil-console pagerduty test` instead sends events titled `[Test]`.
+   Both samples name one test agent: the Dome event by its SPIFFE ID in the trust domain `test.vijil.ai`, the red team event by its test ID. They look like real events on purpose. Console's own `vijil-console pagerduty test` instead sends events titled `[Test]`.
 3. Acknowledge, then resolve, both incidents:
    ```
    vijil-pagerduty test --action acknowledge

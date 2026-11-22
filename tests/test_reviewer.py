@@ -12,12 +12,12 @@ def test_trigger_sends_one_dome_incident_twice_and_one_diamond():
     evs = reviewer.sample_events("trigger", 160)
     assert [e["dedup_key"] for e in evs] == [reviewer.DOME_KEY, reviewer.DOME_KEY, reviewer.DIAMOND_KEY]
     assert [e["payload"]["severity"] for e in evs] == ["error", "error", "warning"]
-    assert all("test.vijil.ai" in json.dumps(e) for e in evs)
+    assert all(reviewer.AGENT_ID in json.dumps(e) for e in evs)  # every sample names the test agent
 
 
 def test_samples_match_what_vijil_console_sends():
     # tests/console_events.json is Console's own builders' output for these sample inputs
-    # (vijil-console src/domains/pagerduty: dome_block_trigger, finding_trigger), links omitted.
+    # (vijil-console src/domains/pagerduty: dome_block_trigger, redteam_trigger), links omitted.
     dome, _, diamond = reviewer.sample_events("trigger", 160)
     assert [dome, diamond] == CONSOLE_EVENTS
 
