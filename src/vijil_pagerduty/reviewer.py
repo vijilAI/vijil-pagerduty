@@ -2,7 +2,7 @@
 
     vijil-pagerduty test [--action trigger|acknowledge|resolve] [--dry-run]
 
-Environment: PAGERDUTY_ROUTING_KEY, the integration key of the service under test.
+Environment: PAGERDUTY_INTEGRATION_KEY, the Integration Key of the service under test.
 
 The samples have the same shape as the events Vijil Console sends (tests/console_events.json
 pins them to Console's output). trigger sends one Dome block event twice (same dedup key:
@@ -95,9 +95,9 @@ def main(argv: list[str] | None = None) -> int:
         for ev in evs:
             print(json.dumps(ev))
         return 0
-    key = os.environ.get("PAGERDUTY_ROUTING_KEY")
+    key = os.environ.get("PAGERDUTY_INTEGRATION_KEY")
     if not key:
-        ap.error("set PAGERDUTY_ROUTING_KEY to the service's integration key")
+        ap.error("set PAGERDUTY_INTEGRATION_KEY to the service's Integration Key")
     failed = 0
     for ev in evs:
         try:

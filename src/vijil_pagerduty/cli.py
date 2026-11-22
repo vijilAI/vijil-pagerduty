@@ -1,7 +1,7 @@
 """vijil-pagerduty: `test` sends sample Vijil events to a PagerDuty integration (see reviewer).
 
 Vijil Console sends the real events itself; this package exists so a PagerDuty user or reviewer
-can check an integration key without a Vijil account.
+can check an Integration Key without a Vijil account.
 """
 
 import sys

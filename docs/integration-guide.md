@@ -2,14 +2,13 @@
 (github.com/PagerDuty/app-documentation-templates, integration-guide-template.md).
 Every behavior below is what Vijil Console does (vijil-console CON-816, PRs #1627, #1628, #1630).
 Open before submission (delete this block when done):
-  1. Support contact: a Vijil support address (the template forbids PagerDuty's).
-  2. The `vijil-console pagerduty` commands ship in the first CLI release after #1630 merges;
+  1. The `vijil-console pagerduty` commands ship in the first CLI release after #1630 merges;
      0.4.23, the current release, does not have them. State the minimum version once known.
-  3. Hosted Console: PagerDuty alerts must be turned on for Vijil's hosted deployments.
-  4. Run every "In Vijil" command against a deployed Console, through its gateway. So far they
+  2. Hosted Console: PagerDuty alerts must be turned on for Vijil's hosted deployments.
+  3. Run every "In Vijil" command against a deployed Console, through its gateway. So far they
      have run in process only; the gateway route they need is in #1630.
-  5. Integration Type name: "Vijil" assumes the app is registered under that name.
-  6. PagerDuty UI labels (Service Directory, Add an integration, the urgency setting): check
+  4. Integration Type name: "Vijil" assumes the app is registered under that name.
+  5. PagerDuty UI labels (Service Directory, Add an integration, the urgency setting): check
      against the live UI. Verified 2026-11-22 against a live service: an urgency rule of
      severity_based paged Dome events at high urgency and Diamond findings at low; a 32-character
      key PagerDuty does not know is accepted (202) and dropped; any other key gets 400.
@@ -19,19 +18,19 @@ Open before submission (delete this block when done):
 
 This guide is for the PagerDuty administrator who connects a PagerDuty service to Vijil. Any member of your team in Vijil Console can do the steps in Vijil.
 
-* Page on-call responders when Vijil Dome blocks requests to an AI agent, so an attack on a live agent reaches the people who handle production incidents.
-* Open a low-urgency incident for each severe Diamond finding, so a vulnerability found in testing gets an owner without waking anyone.
-* Get one incident per agent and control, not one per blocked request. Repeat blocks join the open incident, so a burst of attacks does not flood your on-call.
-* Keep attacker-written text out of PagerDuty. Incidents carry identifiers and counts only, so they are safe for PagerDuty's automation to read.
+* Page on-call responders when Vijil Dome blocks attacks on an AI agent, so an attack on a live agent gets the attention of the people who handle production incidents.
+* Get one incident per agent and control, not one per blocked action. Repeat blocks join the open incident, so a burst of attacks does not flood your on-call.
+* Keep attacker-written text out of PagerDuty. Incidents carry identifiers and counts only, so they are safe for PagerDuty's agents to read.
+* Open a low-urgency incident for each severe Vijil Diamond finding, so a vulnerability found in testing gets an owner without waking anyone.
 
 # How it Works
 
 * Vijil Console sends events to your PagerDuty service through the Events API v2. You store the service's Integration Key in Console once; nothing else runs on your side.
-* **Dome blocks:** Dome is Vijil's runtime protection for agents. About once a minute, Console reads the requests Dome blocked for your team in the last 15 minutes. It groups them by agent and by the control that blocked them, such as `prompt_injection`. Each group sends a trigger event at severity `error`, with the deduplication key `dome:<agent>:<control>`, so further blocks of the same kind join the open incident. Console pages again only for a newly blocked request, including after you resolve the incident. The one exception is a Console restart, which can page the last 15 minutes of blocks once more.
-* **Diamond findings:** Diamond is Vijil's adversarial testing of agents; one test run is an exploration. When an exploration completes, Console sends each finding with a severity of 10 on Diamond's 0 to 10 scale as a trigger event at severity `warning`, with the deduplication key `diamond:<finding ID>`. Each exploration is reported once.
+* **Dome enforces policy:** Dome is Vijil's runtime protection for agents. About once a minute, Console reads the actions Dome blocked for your team in the last 15 minutes. It groups them by agent and by the control that blocked them, such as `prompt_injection`. Each group sends a trigger event at severity `error`, with the deduplication key `dome:<agent>:<control>`, so further blocks of the same kind join the open incident. Console pages again only for a newly blocked action, including after you resolve the incident. The one exception is a Console restart, which can page the last 15 minutes of blocks once more.
+* **Diamond finds faults:** Diamond is Vijil's adversarial testing of agents; one test run is an exploration. When an exploration completes, Console sends each finding with a severity of 10 on Diamond's 0 to 10 scale as a trigger event at severity `warning`, with the deduplication key `diamond:<finding ID>`. Each exploration is reported once.
 * Console never resolves an incident. Resolve Dome incidents once the attack stops, and Diamond incidents once the agent or its policy is fixed.
 * Events carry identifiers and counts, never request or response text, so text an attacker wrote never reaches PagerDuty. They include:
-  * Dome: the agent's ID, the control's name, the number of blocked requests, the first and last block times, and a trace ID.
+  * Dome: the agent's ID, the control's name, the number of blocked actions, the first and last block times, and a trace ID.
   * Diamond: the finding ID, its category and severity score, and the exploration and agent IDs.
 * An agent appears by its Vijil Console ID or SPIFFE ID. Blocks on an agent Vijil cannot identify share one incident, under the agent name `unattributed`.
 
@@ -51,7 +50,7 @@ This guide is for the PagerDuty administrator who connects a PagerDuty service t
 
 # Support
 
-If you need help with this integration, please contact Vijil at **[VIJIL-SUPPORT-CONTACT]**.
+If you need help with this integration, please contact Vijil at **support@vijil.ai**.
 
 # Integration Walkthrough
 
@@ -74,40 +73,71 @@ Each event's `component` field is `dome` or `diamond`. Its `class` field is `dom
 
 ## In Vijil
 
-1. **Store the Integration Key.** Run the following command, and at the `Routing key:` prompt paste the **Integration Key**. The key does not appear on screen, and no command can read it back:
-   ```
-   vijil-console pagerduty set
-   ```
-   The command prints `present: True` and `updated_at:` with the time of the change, as a Unix timestamp.
-2. **Check that the key is stored.** Run the following command at any time; it prints the same two lines:
-   ```
-   vijil-console pagerduty get
-   ```
-3. **Send test events.** Console sends one Diamond test event and one Dome test event with your key:
-   ```
-   vijil-console pagerduty test
-   ```
-   The command prints `dedup_keys:` followed by `vijil-test:diamond` and `vijil-test:dome`. Your service shows two incidents whose titles start with `[Test]`: a Diamond `test_event` finding at low urgency and a Dome block at the `test_event` control at high urgency. While they are open, repeat tests join them instead of opening new incidents.
-4. **Resolve the test incidents in PagerDuty before you rely on the integration.** If your service uses alert grouping, PagerDuty can add a real event to an open test incident when the two arrive close together.
+**Step 1. Store the Integration Key.** Run the following command, then paste the **Integration Key** at the `Integration key:` prompt. The key does not appear on screen, and no command can read it back.
 
-Real events start within about 5 minutes. They include severity-10 findings from explorations started in the last 48 hours that were not reported yet, so expect a few low-urgency incidents soon after you store the key. To replace the key, run step 1 again; Console can use the old key for up to 5 minutes after the change.
+```
+vijil-console pagerduty set
+```
+
+The command prints the key's status. `updated_at` is the time of the change, as a Unix timestamp:
+
+```
+present: True
+updated_at: 1795363151
+```
+
+**Step 2. Check that the key is stored.** Run the following command at any time. It prints the same two lines.
+
+```
+vijil-console pagerduty get
+```
+
+**Step 3. Send test events.** Console sends one Diamond test event and one Dome test event with your key.
+
+```
+vijil-console pagerduty test
+```
+
+The command prints the deduplication keys of the two events:
+
+```
+dedup_keys: [
+  "vijil-test:diamond",
+  "vijil-test:dome"
+]
+```
+
+Your service shows two incidents whose titles start with `[Test]`:
+
+* A Diamond `test_event` finding, at low urgency.
+* A Dome block at the `test_event` control, at high urgency.
+
+While they are open, repeat tests join them instead of opening new incidents.
+
+**Step 4. Resolve the test incidents in PagerDuty before you rely on the integration.** If your service uses alert grouping, PagerDuty can add a real event to an open test incident when the two arrive close together.
+
+Real events start within about 5 minutes. They include severity-10 findings from explorations started in the last 48 hours that were not reported yet, so expect a few low-urgency incidents soon after you store the key. To replace the key, run Step 1 again; Console can use the old key for up to 5 minutes after the change.
 
 ### Troubleshooting
 
 * **`No team selected`:** run `vijil-console team use <team ID>`.
 * **`API error (403)`:** you are not a member of the selected team. Check the team with `vijil-console team list`.
-* **`API error (404): Resource not found: Unable to find pagerduty_key` from `test`:** no key is stored for the selected team. Run step 1.
-* **`API error (502)` with `PagerDuty answered 400` from `test`:** PagerDuty rejected the key as invalid. Copy the **Integration Key** from the service's **Integrations** tab again and repeat step 1.
-* **`test` succeeds but no incidents appear:** PagerDuty accepts a well-formed key it does not recognize and then drops the events. Check that the key you stored is the **Integration Key** of this service, and repeat step 1 if it is not.
+* **`API error (404): Resource not found: Unable to find pagerduty_key` from `test`:** no key is stored for the selected team. Run Step 1.
+* **`API error (502)` with `PagerDuty answered 400` from `test`:** PagerDuty rejected the key as invalid. Copy the **Integration Key** from the service's **Integrations** tab again and repeat Step 1.
+* **`test` succeeds but no incidents appear:** PagerDuty accepts a well-formed key it does not recognize and then drops the events. Check that the key you stored is the **Integration Key** of this service, and repeat Step 1 if it is not.
 * **`API error (503)`:** your Console cannot store or read team keys. Contact Vijil support, or the people who run your Console.
 * **No incidents for real blocks or findings, though `test` works:** PagerDuty alerts may be turned off for your Console; see **Requirements**. Diamond pages only findings of severity 10.
 
 # How to Uninstall
 
-1. In Vijil, delete the stored key. The command asks you to confirm, then prints `Done.`:
-   ```
-   vijil-console pagerduty delete
-   ```
-   Console stops sending events to your service within about 5 minutes.
-2. In PagerDuty, open your service, select the **Integrations** tab, and delete the **Vijil** integration. PagerDuty stops accepting events sent with its Integration Key.
-3. Resolve any open Vijil incidents in PagerDuty. Console never resolves them.
+**Step 1.** In Vijil, delete the stored key. The command asks you to confirm, then prints `Done.`
+
+```
+vijil-console pagerduty delete
+```
+
+Console stops sending events to your service within about 5 minutes.
+
+**Step 2.** In PagerDuty, open your service, select the **Integrations** tab, and delete the **Vijil** integration. PagerDuty stops accepting events sent with its Integration Key.
+
+**Step 3.** Resolve any open Vijil incidents in PagerDuty. Console never resolves them.

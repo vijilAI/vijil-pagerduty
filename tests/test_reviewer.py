@@ -35,7 +35,7 @@ def test_dry_run_sends_nothing(monkeypatch, capsys):
 
 
 def test_missing_key_is_an_error_not_a_silent_success(monkeypatch):
-    monkeypatch.delenv("PAGERDUTY_ROUTING_KEY", raising=False)
+    monkeypatch.delenv("PAGERDUTY_INTEGRATION_KEY", raising=False)
     with pytest.raises(SystemExit) as e:
         reviewer.main([])
     assert e.value.code == 2
@@ -50,7 +50,7 @@ def test_a_failed_send_exits_1_and_the_rest_are_still_sent(monkeypatch):
             raise RuntimeError("PagerDuty answered 400")
         return {"status": "success"}
 
-    monkeypatch.setenv("PAGERDUTY_ROUTING_KEY", "k")
+    monkeypatch.setenv("PAGERDUTY_INTEGRATION_KEY", "k")
     monkeypatch.setattr(events, "send", send)
     assert reviewer.main([]) == 1
     assert len(sent) == 3

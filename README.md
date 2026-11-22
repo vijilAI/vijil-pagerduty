@@ -1,18 +1,18 @@
 # vijil-pagerduty
 
-Vijil Console sends Dome blocks and Diamond findings to PagerDuty as incidents, through the PagerDuty Events API v2. This package does not send them; Console does. It holds the integration guide and a `test` command that sends sample events, so you can check a PagerDuty integration key without a Vijil account.
+Vijil Console sends Dome blocks and Diamond findings to PagerDuty as incidents, through the PagerDuty Events API v2. This package does not send them; Console does. It holds the integration guide and a `test` command that sends sample events, so you can check a PagerDuty Integration Key without a Vijil account.
 
 Setup for customers: [docs/integration-guide.md](docs/integration-guide.md).
 
 ## Test the integration without a Vijil account
 
-This section is for PagerDuty's app reviewers and for anyone checking a new integration key. It needs Python 3.11 or later and nothing else.
+This section is for PagerDuty's app reviewers and for anyone checking a new Integration Key. It needs Python 3.11 or later and nothing else.
 
-1. In PagerDuty, add the **Vijil** integration to a test service that pages no one, and copy its **Integration Key**. An **Events API V2** integration key works the same way. For the low- and high-urgency split below, set the service's **Urgency** to follow alert severity.
+1. In PagerDuty, add the **Vijil** integration to a test service that pages no one, and copy its **Integration Key**. An **Events API V2** integration's Integration Key works the same way. For the low- and high-urgency split below, set the service's **Urgency** to follow alert severity.
 2. Install the package and trigger the sample incidents:
    ```
    pip install vijil-pagerduty
-   export PAGERDUTY_ROUTING_KEY=<integration key>
+   export PAGERDUTY_INTEGRATION_KEY=<Integration Key>
    vijil-pagerduty test
    ```
    Until the package is on PyPI, install it from this repository instead: `pip install git+https://github.com/vijilAI/vijil-pagerduty`.
