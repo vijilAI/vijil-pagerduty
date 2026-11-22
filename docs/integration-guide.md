@@ -42,8 +42,8 @@ This guide is for the PagerDuty administrator who connects a PagerDuty service t
 
 * A PagerDuty account role that can add integrations to a service. If you do not have one, ask an Admin or Account Owner in your organization to configure the integration.
 * A Vijil Console team whose agents are protected by Dome, with Dome reporting to Console, or tested with Diamond red team runs, or both.
-* PagerDuty alerts turned on for your Vijil Console. On Console hosted by Vijil, ask Vijil support. On a Console your organization runs, ask the people who run it.
-* The Vijil Console command-line tool, logged in, with your team selected. On a Console your organization runs, first point the tool at it with `vijil-console auth init --url <your Console URL>`.
+* PagerDuty alerts turned on for your Vijil Console. On a Console hosted by Vijil, ask Vijil support. On a Console self-hosted by your organization, ask the people who run it.
+* The Vijil Console command-line tool, logged in, with your team selected. On a Console hosted by your organization, first point the tool at it with `vijil-console auth init --url <your Console URL>`.
   ```
   pip install vijil-console
   vijil-console auth login
