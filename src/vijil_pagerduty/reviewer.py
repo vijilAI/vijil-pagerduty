@@ -1,11 +1,12 @@
-"""Send sample Vijil events to a PagerDuty integration, with no Phoenix or Vijil account.
+"""Send sample Vijil events to a PagerDuty integration, with no Vijil account.
 
     vijil-pagerduty test [--action trigger|acknowledge|resolve] [--dry-run]
 
 Environment: PAGERDUTY_ROUTING_KEY, the integration key of the service under test.
 
-trigger sends one Dome block event twice (same dedup key: PagerDuty opens one incident)
-and one Diamond finding event. acknowledge and resolve act on both incidents.
+The samples have the same shape as the events Vijil Console sends (tests/console_events.json
+pins them to Console's output). trigger sends one Dome block event twice (same dedup key:
+PagerDuty keeps one alert) and one Diamond finding event. acknowledge and resolve act on both.
 The sample agent's trust domain is test.vijil.ai, so every sample incident names it as a test.
 """
 
@@ -15,26 +16,71 @@ import argparse
 import json
 import os
 import sys
+import time
 
 from vijil_pagerduty import events
 
-AGENT = "spiffe://test.vijil.ai/org/00000000-0000-4000-8000-000000000001/agent/00000000-0000-4000-8000-000000000002"
-DOME = events.Reference(
-    finding_id="00000000000000d1", category="dome_block", severity="error",
-    agent=AGENT, trace_id="0000000000000000000000000000d0e1",
-)
-DIAMOND = events.Reference(
-    finding_id="00000000-0000-4000-8000-0000000000f1", category="pii_leak", severity="warning",
-    agent=AGENT, trace_id="0000000000000000000000000000d1a1",
-)
-DOME_KEY = events.dome_dedup_key(AGENT, "dome-enterprise")
-DIAMOND_KEY = events.diamond_dedup_key(DIAMOND.finding_id)
+ORG = "00000000-0000-4000-8000-000000000001"
+AGENT_ID = "00000000-0000-4000-8000-000000000002"
+AGENT = f"spiffe://test.vijil.ai/org/{ORG}/agent/{AGENT_ID}"
+CONTROL = "prompt_injection"
+FINDING_ID = "00000000-0000-4000-8000-0000000000f1"
+EXPLORATION_ID = "00000000-0000-4000-8000-0000000000e1"
+WINDOW_SECONDS = 900
+DOME_KEY = f"dome:{AGENT}:{CONTROL}"
+DIAMOND_KEY = f"diamond:{FINDING_ID}"
 
 
-def sample_events(action: str) -> list[dict]:
+def dome_block(now: int) -> dict:
+    return {
+        "event_action": "trigger",
+        "dedup_key": DOME_KEY,
+        "payload": {
+            "summary": f"Vijil Dome blocked 2 request(s) at {CONTROL} from agent {AGENT} in {WINDOW_SECONDS // 60} min",
+            "source": "vijil-dome",
+            "severity": "error",
+            "component": "dome",
+            "class": "dome_block",
+            "custom_details": {
+                "agent": AGENT,
+                "control": CONTROL,
+                "blocked_count": 2,
+                "first_blocked_at": now - 60,
+                "last_blocked_at": now,
+                "window_seconds": WINDOW_SECONDS,
+                "window_truncated": False,
+                "trace_id": "0000000000000000000000000000d0e1",
+            },
+        },
+    }
+
+
+def diamond_finding() -> dict:
+    return {
+        "event_action": "trigger",
+        "dedup_key": DIAMOND_KEY,
+        "payload": {
+            "summary": f"Vijil Diamond finding: pii_leak (severity 10) on agent {AGENT_ID}",
+            "source": "vijil-diamond",
+            "severity": "warning",
+            "component": "diamond",
+            "class": "pii_leak",
+            "custom_details": {
+                "finding_id": FINDING_ID,
+                "category": "pii_leak",
+                "severity_score": 10.0,
+                "exploration_id": EXPLORATION_ID,
+                "agent_id": AGENT_ID,
+                "agent_spiffe_id": AGENT,
+            },
+        },
+    }
+
+
+def sample_events(action: str, now: int) -> list[dict]:
     if action == "trigger":
-        dome = events.trigger(DOME, DOME_KEY, source="vijil-dome", component="dome")
-        return [dome, dome, events.trigger(DIAMOND, DIAMOND_KEY, source="vijil-diamond", component="diamond")]
+        dome = dome_block(now)
+        return [dome, dome, diamond_finding()]
     build = events.acknowledge if action == "acknowledge" else events.resolve
     return [build(DOME_KEY), build(DIAMOND_KEY)]
 
@@ -44,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--action", choices=["trigger", "acknowledge", "resolve"], default="trigger")
     ap.add_argument("--dry-run", action="store_true", help="print events, send nothing")
     args = ap.parse_args(argv)
-    evs = sample_events(args.action)
+    evs = sample_events(args.action, int(time.time()))
     if args.dry_run:
         for ev in evs:
             print(json.dumps(ev))

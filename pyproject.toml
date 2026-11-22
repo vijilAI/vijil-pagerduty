@@ -1,7 +1,7 @@
 [project]
 name = "vijil-pagerduty"
 version = "0.1.0"
-description = "Send Vijil Dome blocks and Diamond findings to PagerDuty as incidents"
+description = "PagerDuty integration guide and sample-event test command for Vijil"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]

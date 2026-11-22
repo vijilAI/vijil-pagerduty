@@ -1,20 +1,30 @@
 import json
+from pathlib import Path
 
 import pytest
 
 from vijil_pagerduty import events, reviewer
 
+CONSOLE_EVENTS = json.loads((Path(__file__).parent / "console_events.json").read_text())
+
 
 def test_trigger_sends_one_dome_incident_twice_and_one_diamond():
-    evs = reviewer.sample_events("trigger")
+    evs = reviewer.sample_events("trigger", 160)
     assert [e["dedup_key"] for e in evs] == [reviewer.DOME_KEY, reviewer.DOME_KEY, reviewer.DIAMOND_KEY]
     assert [e["payload"]["severity"] for e in evs] == ["error", "error", "warning"]
-    assert all("test.vijil.ai" in e["payload"]["summary"] for e in evs)
+    assert all("test.vijil.ai" in json.dumps(e) for e in evs)
+
+
+def test_samples_match_what_vijil_console_sends():
+    # tests/console_events.json is Console's own builders' output for these sample inputs
+    # (vijil-console src/domains/pagerduty: dome_block_trigger, finding_trigger), links omitted.
+    dome, _, diamond = reviewer.sample_events("trigger", 160)
+    assert [dome, diamond] == CONSOLE_EVENTS
 
 
 @pytest.mark.parametrize("action", ["acknowledge", "resolve"])
 def test_follow_up_actions_target_both_incidents(action):
-    evs = reviewer.sample_events(action)
+    evs = reviewer.sample_events(action, 0)
     assert evs == [{"event_action": action, "dedup_key": k} for k in (reviewer.DOME_KEY, reviewer.DIAMOND_KEY)]
 
 
